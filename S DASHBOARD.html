@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="dashboardstyle.css">
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-logo">
+            <img src="logo.webp" alt="Ashesi Logo" class="logo-small">
+            <h2>Student Dashboard</h2>
+        </div>
+        <div class="header-actions">
+            <button id="search-courses-btn" class="header-action">Search Courses</button>
+            <a href="logout.php" class="logout-btn">Logout</a>
+        </div>
+    </header>
+
+    <main class="dashboard-layout">
+        <nav class="sidebar-nav">
+            <a href="#my-courses" class="nav-item active">My Courses</a>
+            <a href="#session-schedule" class="nav-item">Session Schedule</a>
+            <a href="#grades-reports" class="nav-item">Grades / Reports</a>
+            </nav>
+
+        <section class="content-area">
+            <section id="my-courses" class="dashboard-section">
+                <h3>My Current Course Enrollment</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Course ID</th>
+                            <th>Course Name</th>
+                            <th>Faculty</th>
+                            <th>Enrolled At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="courses-body">
+                        <tr><td colspan="4">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="session-schedule" class="dashboard-section hidden">
+                <h3>Attendance Check-in</h3>
+                <p>Enter the 6-digit code provided by your instructor during the session.</p>
+                <form id="attendance-check-in-form" style="display:flex; gap:10px; align-items:center; margin-bottom:20px;">
+                    <label>Attendance Code:
+                        <input type="text" id="att-code-input" name="attendance_code" maxlength="6" required style="text-transform:uppercase; padding:10px; border:2px solid #ccc; width:150px;">
+                    </label>
+                    <button type="submit" id="check-in-btn" class="submit-btn" style="padding:10px 15px; background-color:#a43e3e;">Check In</button>
+                </form>
+                <div id="check-in-msg" class="form-msg" style="margin-top:10px; font-weight:bold;"></div>
+
+                <hr>
+
+                <h4>Weekly Session Schedule</h4>
+                <div class="schedule-card">
+                    <p><strong>Monday 10:00 AM:</strong> CS 341 (Room A205)</p>
+                    <p><strong>Wednesday 1:00 PM:</strong> MTH 201 (Lab B101)</p>
+                </div>
+            </section>
+
+            <section id="grades-reports" class="dashboard-section hidden">
+                <h3>Attendance Reports</h3>
+                <p>Overall Attendance Summary:</p>
+                <table class="data-table" id="attendance-summary-table">
+                    <thead>
+                        <tr><th>Course</th><th>Sessions Attended</th><th>Total Sessions</th><th>Attendance %</th></tr>
+                    </thead>
+                    <tbody id="summary-body">
+                        <tr><td colspan="4">Loading summary...</td></tr>
+                    </tbody>
+                </table>
+                
+                <h4>Detailed Attendance History (Select Course)</h4>
+                <select id="detailed-course-select" style="padding: 8px; margin-bottom: 10px;">
+                    <option value="0">Select Course for Detail</option>
+                    </select>
+                <table class="data-table" id="detailed-attendance-table" style="margin-top:15px;">
+                    <thead>
+                        <tr><th>Date</th><th>Session ID</th><th>Status</th><th>Check-in Time</th></tr>
+                    </thead>
+                    <tbody id="detailed-body">
+                        <tr><td colspan="4">Select a course above for detailed history.</td></tr>
+                    </tbody>
+                </table>
+            </section>
+                    </section>
+    </main>
+
+    <!-- Search / Join Courses Modal -->
+    <div id="searchModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <button class="modal-close" data-target="searchModal">×</button>
+            <h3>Search Courses</h3>
+            <input id="search-input" placeholder="Search by code, title, or faculty" style="width:100%;padding:8px;margin-bottom:8px;">
+            <div id="search-results">Type to search courses.</div>
+        </div>
+    </div>
+
+<script>
+// Authorization and AJAX-driven UI for students
+document.addEventListener('DOMContentLoaded', function () {
+    // Verify session and role
+    fetch('check_session.php')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.logged_in) {
+                window.location.href = 'login.php';
+                return;
+            }
+            if (data.role && data.role !== 'student') {
+                // Redirect faculty/fi to their dashboards
+                if (data.role === 'faculty') window.location.href = 'F DASHBOARD.html';
+                else if (data.role === 'fi') window.location.href = 'FI DASHBOARD.html';
+            } else {
+                loadMyCourses();
+            }
+        })
+        .catch(() => {
+            // If check fails, go to login
+            window.location.href = 'login.php';
+        });
+
+    // Elements
+    const searchBtn = document.getElementById('search-courses-btn');
+    const searchModal = document.getElementById('searchModal');
+    const searchInput = document.getElementById('search-input');
+    const resultsDiv = document.getElementById('search-results');
+
+    searchBtn.addEventListener('click', () => { openModal('searchModal'); searchInput.focus(); searchInput.value = ''; resultsDiv.textContent = 'Type to search courses.'; });
+    document.querySelectorAll('.modal-close').forEach(b => b.addEventListener('click', () => closeModal(b.dataset.target)));
+
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // Debounced search
+    let timeout = null;
+    searchInput.addEventListener('input', function () {
+        clearTimeout(timeout);
+        const q = this.value.trim();
+        timeout = setTimeout(() => doSearch(q), 300);
+    });
+
+    function doSearch(q) {
+        resultsDiv.textContent = 'Searching...';
+        fetch('search_courses.php?q=' + encodeURIComponent(q))
+            .then(r => r.json())
+            .then(list => {
+                if (!Array.isArray(list) || list.length === 0) {
+                    resultsDiv.innerHTML = '<p>No courses found.</p>';
+                    return;
+                }
+                resultsDiv.innerHTML = '';
+                list.forEach(c => {
+                    const row = document.createElement('div');
+                    row.className = 'search-row';
+                    row.innerHTML = `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee;">
+                            <div>
+                                <strong>${escapeHtml(c.course_code)}</strong> — ${escapeHtml(c.title)}<br>
+                                <small>Faculty: ${escapeHtml(c.faculty_name || 'TBA')} | Term: ${escapeHtml(c.term || '')}</small>
+                            </div>
+                            <div>
+                                ${c.enrolled ? '<em>Enrolled</em>' : (c.request_status === 'pending' ? '<em>Request pending</em>' : `<button class="request-join-btn" data-id="${c.course_id}">Request to Join</button>`) }
+                            </div>
+                        </div>
+                    `;
+                    resultsDiv.appendChild(row);
+                });
+                // Wire request buttons
+                resultsDiv.querySelectorAll('.request-join-btn').forEach(b => b.addEventListener('click', requestJoin));
+            })
+            .catch(e => { resultsDiv.textContent = 'Search failed.'; });
+    }
+
+    // --- Attendance Check-in Logic ---
+    document.getElementById('attendance-check-in-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const msgDiv = document.getElementById('check-in-msg');
+        const checkInBtn = document.getElementById('check-in-btn');
+
+        msgDiv.textContent = 'Processing...';
+        checkInBtn.disabled = true;
+
+        try {
+            const res = await fetch('check_in.php', { method: 'POST', body: new FormData(form) });
+            const json = await res.json();
+
+            if (json.success) {
+                msgDiv.textContent = '✅ Success: ' + json.message;
+                form.reset();
+            } else {
+                msgDiv.textContent = '❌ Error: ' + (json.error || 'Check-in failed.');
+            }
+        } catch (err) {
+            msgDiv.textContent = '❌ Network error during check-in.';
+        } finally {
+            checkInBtn.disabled = false;
+        }
+    });
+
+    function requestJoin(e) {
+        const courseId = e.target.dataset.id;
+        e.target.disabled = true;
+        e.target.textContent = 'Requesting...';
+        const form = new FormData();
+        form.append('course_id', courseId);
+        fetch('request_join.php', { method: 'POST', body: form })
+            .then(r => r.json())
+            .then(resp => {
+                if (resp.success) {
+                    e.target.textContent = 'Requested';
+                    // refresh search results and notify user
+                    setTimeout(() => doSearch(searchInput.value.trim()), 400);
+                } else {
+                    alert(resp.error || 'Request failed');
+                    e.target.disabled = false;
+                    e.target.textContent = 'Request to Join';
+                }
+            })
+            .catch(() => { alert('Network error'); e.target.disabled = false; e.target.textContent = 'Request to Join'; });
+    }
+
+    // Load current student's enrolled courses
+    function loadMyCourses() {
+        const body = document.getElementById('courses-body');
+        body.innerHTML = '<tr><td colspan="4">Loading...</td></tr>';
+        fetch('get_student_courses.php')
+            .then(r => r.json())
+            .then(list => {
+                if (!Array.isArray(list) || list.length === 0) {
+                    body.innerHTML = '<tr><td colspan="4">You are not enrolled in any courses. Use \"Search Courses\" to request to join.</td></tr>';
+                    return;
+                }
+                body.innerHTML = '';
+                list.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${escapeHtml(c.course_code)}</td>
+                        <td>${escapeHtml(c.title)}</td>
+                        <td>${escapeHtml(c.faculty_name || 'TBA')}</td>
+                        <td>${escapeHtml(c.enrolled_at || '')}</td>
+                    `;
+                    body.appendChild(tr);
+                });
+            })
+            .catch(() => { body.innerHTML = '<tr><td colspan="4">Failed to load courses.</td></tr>'; });
+    }
+
+    // Simple HTML escape
+    function escapeHtml(s) { if (!s && s !== 0) return ''; return String(s).replace(/[&<>\"']/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[m]; }); }
+});
+
+
+    // --- Attendance Reporting Logic ---
+    const summaryBody = document.getElementById('summary-body');
+    const detailSelect = document.getElementById('detailed-course-select');
+    const detailedBody = document.getElementById('detailed-body');
+    let studentCourses = []; // Store courses for the dropdown
+
+    // Load both course list (for dropdown) and the summary report
+    function loadAttendanceReports() {
+        // Fetch summary report (course_id is null)
+        fetch('get_student_attendance.php')
+            .then(r => r.json())
+            .then(summaryList => {
+                studentCourses = summaryList; // Save for dropdown population
+                
+                if (!Array.isArray(summaryList) || summaryList.length === 0) {
+                    summaryBody.innerHTML = '<tr><td colspan="4">No sessions or enrollments found.</td></tr>';
+                    detailSelect.innerHTML = '<option value="0">No Courses Available</option>';
+                    return;
+                }
+                
+                // Populate Summary Table
+                summaryBody.innerHTML = '';
+                summaryList.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${escapeHtml(item.course_code)}</td>
+                        <td>${item.sessions_attended}</td>
+                        <td>${item.total_sessions}</td>
+                        <td><strong>${item.attendance_percent}%</strong></td>
+                    `;
+                    summaryBody.appendChild(tr);
+                });
+                
+                // Populate Detailed Select Dropdown
+                detailSelect.innerHTML = '<option value="0">Select Course for Detail</option>';
+                summaryList.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.course_id;
+                    option.textContent = `${c.course_code} - ${c.title}`;
+                    detailSelect.appendChild(option);
+                });
+                
+            })
+            .catch(() => {
+                summaryBody.innerHTML = '<tr><td colspan="4">Failed to load attendance summary.</td></tr>';
+            });
+    }
+
+    // Load detailed report when the course dropdown changes
+    detailSelect.addEventListener('change', function() {
+        const courseId = this.value;
+        if (courseId === '0') {
+            detailedBody.innerHTML = '<tr><td colspan="4">Select a course above for detailed history.</td></tr>';
+            return;
+        }
+
+        detailedBody.innerHTML = '<tr><td colspan="4">Loading details...</td></tr>';
+        
+        fetch(`get_student_attendance.php?course_id=${courseId}`)
+            .then(r => r.json())
+            .then(detailList => {
+                if (!Array.isArray(detailList) || detailList.length === 0) {
+                    detailedBody.innerHTML = '<tr><td colspan="4">No sessions recorded for this course.</td></tr>';
+                    return;
+                }
+                
+                detailedBody.innerHTML = '';
+                detailList.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const statusClass = item.status === 'Present' ? 'style="color:green; font-weight:bold;"' : 'style="color:red; font-weight:bold;"';
+                    tr.innerHTML = `
+                        <td>${new Date(item.session_datetime).toLocaleDateString()}</td>
+                        <td>${item.session_id}</td>
+                        <td ${statusClass}>${item.status}</td>
+                        <td>${item.check_in_time ? new Date(item.check_in_time).toLocaleTimeString() : 'N/A'}</td>
+                    `;
+                    detailedBody.appendChild(tr);
+                });
+            })
+            .catch(() => {
+                detailedBody.innerHTML = '<tr><td colspan="4">Failed to load detailed report.</td></tr>';
+            });
+    });
+
+    // We need to call this function after the initial course loading.
+    // Ensure you call loadAttendanceReports() within your main fetch('check_session.php') success block
+    // after loadMyCourses() is called (or replace loadMyCourses with this function if it includes course loading).
+    
+    // Modification to initial load:
+    /* Inside fetch('check_session.php').then(...):
+        ...
+        } else {
+            loadMyCourses(); // Keep this to load the course enrollment table
+            loadAttendanceReports(); // Add this to load the reporting data
+        }
+    */
+</script>
+</body>
+</html>

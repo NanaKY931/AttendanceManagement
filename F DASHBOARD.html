@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard</title>
+    <link rel="stylesheet" href="dashboardstyle.css">
+</head>
+<body>
+    <header class="main-header">
+                    <div class="header-logo">
+                        <div id="createSessionModal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <button class="modal-close" data-target="createSessionModal">×</button>
+                    <h3>Start a New Attendance Session</h3>
+                    <form id="create-session-form">
+                        <label>Course:
+                            <select name="course_id" id="session-course-select" required>
+                                <option value="">Loading courses...</option>
+                            </select>
+                        </label>
+                        <label>Attendance Code Duration (min):
+                            <input type="number" name="duration" value="10" min="5" max="60" required>
+                        </label>
+                        <button type="submit">Generate Code & Start Session</button>
+                        <div id="session-form-msg" class="form-msg"></div>
+                    </form>
+                    <div id="active-session-display" style="margin-top:20px; text-align:center; font-size:1.2em; display:none; padding:15px; border:2px solid #622020; border-radius:8px;">
+                        <p>Code for <strong id="session-course-code"></strong>:</p>
+                        <h2 style="color:#622020; font-size:2em;"><strong id="current-attendance-code">----</strong></h2>
+                        <p>Expires in: <strong id="countdown" style="color:red;">--:--</strong></p>
+                        <button id="end-session-btn" class="submit-btn" style="background-color:red; margin-top:10px;">End Session Early</button>
+                    </div>
+                </div>
+            </div>
+            <img src="logo.webp" alt="Ashesi Logo" class="logo-small" width="50" height="50">
+            <div class="header-info" data-user-id="FACULTY_ID" data-user-role="faculty">
+                <span class="user-label">Welcome, <strong id="faculty-name">Faculty Name</strong></span>
+                <button id="create-course-btn" class="header-action">Create Course</button>
+                <button id="manage-requests-btn" class="header-action">Manage Requests</button>
+            </div>
+
+            <!-- Create Course Modal -->
+            <div id="createCourseModal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <button class="modal-close" data-target="createCourseModal">×</button>
+                    <h3>Create New Course</h3>
+                    <form id="create-course-form">
+                        <label>Course Code<input name="course_code" required></label>
+                        <label>Title<input name="title" required></label>
+                        <label>Term<input name="term"></label>
+                        <input type="hidden" name="faculty_id" id="create-faculty-id">
+                        <button type="submit">Create</button>
+                        <div id="create-course-msg" class="form-msg"></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Manage Requests Modal -->
+            <div id="manageRequestsModal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <button class="modal-close" data-target="manageRequestsModal">×</button>
+                    <h3>Pending Join Requests</h3>
+                    <div id="requests-list">Loading...</div>
+                </div>
+            </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Verify session and role
+                fetch('check_session.php')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.logged_in) {
+                            window.location.href = 'login.php';
+                            return;
+                        }
+                        if (data.role !== 'faculty') {
+                            // Redirect non-faculty users
+                            if (data.role === 'student') window.location.href = 'S DASHBOARD.html';
+                            else if (data.role === 'fi') window.location.href = 'FI DASHBOARD.html';
+                            else window.location.href = 'login.php';
+                            return;
+                        }
+                        // Set faculty name and ID
+                        document.getElementById('faculty-name').textContent = data.username || 'Faculty';
+                        document.querySelector('.header-info').dataset.userId = data.user_id;
+                        document.getElementById('create-faculty-id').value = data.user_id;
+                        wireUpModals(data.user_id);
+                    })
+                    .catch(() => window.location.href = 'login.php');
+
+                function wireUpModals(facultyId) {
+
+                    // --- Attendance Session Logic ---
+    let activeSessionId = null;
+    let countdownInterval = null;
+
+    // Add listener for the new button
+    document.getElementById('create-session-btn').addEventListener('click', () => {
+        openModal('createSessionModal');
+        loadFacultyCourses();
+    });
+
+    // 1. Load courses for the dropdown
+    async function loadFacultyCourses() {
+        const select = document.getElementById('session-course-select');
+        select.innerHTML = '<option value="">Loading...</option>';
+        try {
+            const res = await fetch('get_faculty_courses.php');
+            const courses = await res.json();
+            
+            if (!Array.isArray(courses) || courses.length === 0) {
+                select.innerHTML = '<option value="">No courses assigned.</option>';
+                return;
+            }
+            select.innerHTML = '<option value="">Select Course</option>';
+            courses.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = `${c.course_code} - ${c.title}`;
+                select.appendChild(option);
+            });
+        } catch (err) {
+            select.innerHTML = '<option value="">Failed to load courses.</option>';
+        }
+    }
+
+    // 2. Handle Session Creation
+    document.getElementById('create-session-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const form = e.target;
+        const msg = document.getElementById('session-form-msg');
+        msg.textContent = 'Generating session...';
+
+        try {
+            const res = await fetch('create_session.php', { method: 'POST', body: new FormData(form) });
+            const json = await res.json();
+
+            if (json.success) {
+                activeSessionId = json.session_id;
+                const courseCode = form.querySelector(`#session-course-select option[value="${json.course_id}"]`).textContent.split(' - ')[0];
+
+                // Show the active session display
+                document.getElementById('session-form-msg').textContent = '';
+                form.style.display = 'none';
+                document.getElementById('session-course-code').textContent = courseCode;
+                document.getElementById('current-attendance-code').textContent = json.code;
+                document.getElementById('active-session-display').style.display = 'block';
+
+                startCountdown(json.duration); // Start the timer
+            } else {
+                msg.textContent = json.error || 'Failed to start session.';
+            }
+        } catch (err) {
+            msg.textContent = 'Network error.';
+        }
+    });
+
+    // 3. Handle Session End (Early)
+    document.getElementById('end-session-btn').addEventListener('click', async function (e) {
+        if (!activeSessionId) return;
+
+        e.target.disabled = true;
+        e.target.textContent = 'Ending...';
+
+        try {
+            const res = await fetch('end_session.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: activeSessionId })
+            });
+            const json = await res.json();
+
+            if (json.success) {
+                clearInterval(countdownInterval);
+                resetSessionModal('Session ended successfully.');
+            } else {
+                alert(json.error || 'Failed to end session.');
+                e.target.disabled = false;
+                e.target.textContent = 'End Session Early';
+            }
+        } catch (err) {
+            alert('Network error.');
+            e.target.disabled = false;
+            e.target.textContent = 'End Session Early';
+        }
+    });
+
+    // 4. Countdown Timer Logic
+    function startCountdown(durationMinutes) {
+        let timer = durationMinutes * 60;
+        const countdownDisplay = document.getElementById('countdown');
+        const form = document.getElementById('create-session-form');
+        
+        // Clear any existing interval
+        if (countdownInterval) clearInterval(countdownInterval);
+
+        countdownInterval = setInterval(() => {
+            let minutes = parseInt(timer / 60, 10);
+            let seconds = parseInt(timer % 60, 10);
+
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+
+            countdownDisplay.textContent = minutes + ":" + seconds;
+
+            if (--timer < 0) {
+                clearInterval(countdownInterval);
+                // Optionally: Send signal to end session in DB if it hasn't expired automatically
+                resetSessionModal('Session time expired.');
+            }
+        }, 1000);
+    }
+
+    function resetSessionModal(message) {
+        document.getElementById('active-session-display').style.display = 'none';
+        document.getElementById('create-session-form').style.display = 'block';
+        document.getElementById('create-session-form').reset();
+        document.getElementById('session-form-msg').textContent = message;
+        document.getElementById('end-session-btn').disabled = false;
+        document.getElementById('end-session-btn').textContent = 'End Session Early';
+        activeSessionId = null;
+    }
+
+                    const openModal = (id) => document.getElementById(id).style.display = 'block';
+                    const closeModal = (id) => document.getElementById(id).style.display = 'none';
+
+                    document.getElementById('create-course-btn').addEventListener('click', () => openModal('createCourseModal'));
+                    document.getElementById('manage-requests-btn').addEventListener('click', () => { openModal('manageRequestsModal'); loadRequests(); });
+
+                    document.querySelectorAll('.modal-close').forEach(btn => {
+                        btn.addEventListener('click', () => closeModal(btn.dataset.target));
+                    });
+
+                    // Create course via AJAX
+                    document.getElementById('create-course-form').addEventListener('submit', async function (e) {
+                        e.preventDefault();
+                        const form = e.target;
+                        const msg = document.getElementById('create-course-msg');
+                        msg.textContent = 'Creating...';
+                        try {
+                            const res = await fetch('create_course.php', { method: 'POST', body: new FormData(form) });
+                            const json = await res.json();
+                            if (json.success) {
+                                msg.textContent = 'Course created successfully.';
+                                form.reset();
+                            } else {
+                                msg.textContent = json.error || 'Failed to create course.';
+                            }
+                        } catch (err) {
+                            msg.textContent = 'Network error.';
+                        }
+                    });
+
+                    // Load pending join requests
+                    async function loadRequests() {
+                        const container = document.getElementById('requests-list');
+                        container.textContent = 'Loading...';
+                        try {
+                            const res = await fetch('get_requests.php');
+                            const json = await res.json();
+                            if (!Array.isArray(json)) { container.textContent = 'No requests.'; return; }
+                            container.innerHTML = '';
+                            json.forEach(req => {
+                                const row = document.createElement('div');
+                                row.className = 'request-row';
+                                row.innerHTML = `
+                                    <div><strong>${req.student_name}</strong> — ${req.course_code} ${req.course_title}</div>
+                                    <div class="request-actions">
+                                        <button data-id="${req.request_id}" class="approve-btn">Approve</button>
+                                        <button data-id="${req.request_id}" class="reject-btn">Reject</button>
+                                    </div>
+                                `;
+                                container.appendChild(row);
+                            });
+                            // wire approve/reject
+                            container.querySelectorAll('.approve-btn').forEach(b => b.addEventListener('click', handleDecision));
+                            container.querySelectorAll('.reject-btn').forEach(b => b.addEventListener('click', handleDecision));
+                        } catch (err) {
+                            container.textContent = 'Failed to load requests.';
+                        }
+                    }
+
+                    async function handleDecision(e) {
+                        const isApprove = e.target.classList.contains('approve-btn');
+                        const requestId = e.target.dataset.id;
+                        try {
+                            const res = await fetch(isApprove ? 'approve_request.php' : 'reject_request.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ request_id: requestId })
+                            });
+                            const json = await res.json();
+                            if (json.success) {
+                                loadRequests();
+                            } else {
+                                alert(json.error || 'Action failed');
+                            }
+                        } catch (err) {
+                            alert('Network error');
+                        }
+                    }
+                }
+            });
+            </script>
+            <h2>Faculty Dashboard</h2>
+        </div>
+        <a href="logout.php" class="logout-btn">Logout</a>
+    </header>
+
+    <main class="dashboard-layout">
+        
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item">Home Dashboard</a>
+            <a href="#course-management" class="nav-item">Course Management</a>
+            <a href="#session-overview" class="nav-item">Session Overview</a>
+            <a href="#attendance-reports" class="nav-item">Attendance Reports</a>
+        </nav>
+
+        <section class="content-area">
+            
+            <section id="welcome-message" class="dashboard-section">
+                <h3>Welcome to the Faculty Dashboard!</h3>
+                <p>Select an option from the navigation menu to begin managing courses or viewing reports. Click **Home Dashboard** to collapse the view.</p>
+            </section>
+            
+            <section id="course-management" class="dashboard-section">
+                <h3>Course Management</h3>
+                <p>Use this section to view, add, or modify courses assigned to you, i.e. setting course schedules and assigning Faculty Interns.</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Course ID</th>
+                            <th>Course Title</th>
+                            <th>Term</th>
+                            <th>Students Enrolled</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>CS 341</td><td>Web Technologies</td><td>Fall 2025</td><td>45</td></tr>
+                        <tr><td>CS 402</td><td>Software Engineering</td><td>Fall 2025</td><td>32</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section id="session-overview" class="dashboard-section">
+                <h3>Session Overview</h3>
+                <p>Monitor real-time status of current sessions, including live attendance taking and active FI assignments.</p>
+                <div class="card-grid">
+                    <div class="info-card">Total Sessions: 120</div>
+                    <div class="info-card">Sessions Taught: 45</div>
+                </div>
+            </section>
+
+            <section id="attendance-reports" class="dashboard-section">
+                <h3>Generate Attendance Reports</h3>
+                <p>Generate detailed attendance reports by course, date range, or student. Reports can be exported as CSV/PDF.</p>
+                <form class="report-filter">
+                    <label for="course-select">Select Course:</label>
+                    <select id="course-select">
+                        <option>CS 341 - Web Technologies</option>
+                        <option>CS 402 - Software Engineering</option>
+                    </select>
+                    <button class="submit-btn" style="background-color:#622020;">Generate Report</button>
+                </form>
+            </section>
+        </section>
+    </main>
+</body>
+</html>

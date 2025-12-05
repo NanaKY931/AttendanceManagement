@@ -1,0 +1,65 @@
+body {
+    font-family: 'Times New Roman', Times, serif, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, rgba(164,62,62,0.50) 0%, rgba(98,32,32,0.50) 100%),
+        url("campus.webp") center center/cover no-repeat fixed;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.auth-container {
+    text-align: center;
+}
+
+.login-form {
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    min-width: 350px;
+    display: flex;
+    flex-direction: column;
+}
+
+input {
+    border-color: #a43e3e;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 3px solid #ccc;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.submit-btn {
+    background-color: #622020;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ffffff;
+    background-color: #622020;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.submit-btn:hover {
+    background-color: #923333;
+    transform: translateY(-2px);
+}
+
+.switch-link a {
+    color: #622020;
+    font-weight: bold;
+    text-decoration: button;
+}
+.switch-link a:hover {
+    text-decoration: underline;
+    color: #426eb4;
+    font-weight: bold;
+    border: 3px solid #622020;
+}

@@ -1,0 +1,240 @@
+/* General Setup */
+body {
+    font-family: Arial, sans-serif, monospace;
+        background: linear-gradient(135deg, rgba(164,62,62,0.50) 0%, rgba(98,32,32,0.50) 100%),
+        url("campus.webp") center center/cover no-repeat fixed;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header Styling (Top Bar) */
+.main-header {
+    background-color: #622020; /* Deep Maroon Accent */
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-logo {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+    align-items: center;
+}
+
+.logo-small {
+    height: 40px; /* Adjust size */
+    margin-right: 15px;
+}
+
+.logout-btn {
+    color: white;
+    text-decoration: none;
+    padding: 8px 15px;
+    border: 1px solid white;
+    border-radius: 5px;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+/* Applying your requested hover feature */
+.logout-btn:hover {
+    background-color: white;
+    color: #622020;
+    transform: scale(1.05);
+}
+
+/* Main Layout using Flexbox for Responsiveness */
+.dashboard-layout {
+    display: flex;
+    min-height: calc(100vh - 70px); /* Account for header height */
+}
+
+/* Sidebar Navigation */
+.sidebar-nav {
+    width: 250px;
+    background-color: #ffffff;
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-item {
+    padding: 15px 10px;
+    margin-bottom: 5px;
+    text-decoration: none;
+    color: #333;
+    border-radius: 8px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.nav-item:hover, .nav-item.active {
+    background-color: #f0f0f0;
+    color: #622020; /* Maroon on hover/active */
+}
+
+/* Content Area */
+.content-area {
+    display: flex;
+    padding: 30px;
+    padding: 30px;
+    border-radius: 12px;
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+}
+
+.content-area > section {
+    display: none !important;
+}
+
+/* THE TOGGLE LOGIC */
+.content-area > section:target {
+    display: block !important;
+}
+
+.content-area > #welcome-message {
+    display: block !important;
+}   /* Default visible section */
+
+.dashboard-section {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+}
+
+/* Table Styling */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.data-table th, .data-table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.data-table th {
+    background-color: #f4f7f9;
+    color: #333;
+    font-weight: bold;
+}
+
+/* a class to simulate section switching */
+.hidden {
+    display: none;
+}
+
+/* --- Modal Overlays (Necessary for F and S DASHBOARDS) --- */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1000; /* High z-index to be on top of everything */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 25px;
+    border: 1px solid #888;
+    width: 80%; /* Could be more specific, e.g., max-width: 500px */
+    max-width: 600px;
+    border-radius: 10px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.modal-close:hover,
+.modal-close:focus {
+    color: #622020;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* --- Attendance & Session Specific Styles --- */
+
+/* Message/Error Display */
+.form-msg {
+    padding: 8px;
+    border-radius: 4px;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+/* Faculty Active Session Display Box */
+#active-session-display {
+    border: 2px solid #622020; /* Deep Maroon Border */
+    padding: 20px;
+    border-radius: 8px;
+    background-color: #f9f0f0; /* Very light pink/maroon background */
+}
+
+/* The actual 6-digit code */
+#current-attendance-code {
+    display: inline-block;
+    font-family: monospace;
+    font-size: 2.5em;
+    padding: 10px 20px;
+    margin: 10px 0;
+    border: 2px dashed #a43e3e; 
+    background-color: white;
+    border-radius: 5px;
+    color: #622020;
+}
+
+/* Student Check-In Form */
+#attendance-check-in-form {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#att-code-input {
+    text-transform: uppercase;
+    font-size: 1.1em;
+    width: 150px;
+    text-align: center;
+    letter-spacing: 5px;
+}
+
+/* Student Reports - Status Highlighting */
+/* Status cells are styled directly in the HTML/JS for simplicity, but we can define classes here */
+.status-present {
+    color: #27ae60; /* Green for Present */
+    font-weight: bold;
+}
+
+.status-absent {
+    color: #c0392b; /* Red for Absent */
+    font-weight: bold;
+}
+
+/* Ensure data tables look good in reports */
+#attendance-summary-table th, #detailed-attendance-table th {
+    background-color: #a43e3e; /* Use a slightly lighter/more saturated maroon for report headers */
+    color: white;
+}

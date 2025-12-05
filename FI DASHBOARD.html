@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>FI Dashboard</title>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, 'Times New Roman', Times, serif;
+                background-color: #f4f7f9;
+                background-image: url("campus.webp");
+                background-size: cover;
+                background-position: center/center no-repeat, fixed;
+                opacity: 0.8;
+                color: #333;
+                line-height: 1.6;
+                margin: 0;
+                padding: 20px;
+            }
+
+            .container {
+                max-width: 1200px;
+                margin: auto;
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+
+            h1, h2 {
+                color: #2c3e50;
+                text-align: center;
+            }
+
+            .table-section {
+                margin-bottom: 40px;
+            }
+
+            .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .button {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+            background-color: #622020;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .button:hover {
+            background-color: #923333;
+            transform: translateY(-2px);
+        }
+        .button:active {
+            transform: translateY(0);
+        }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+                border-radius: 8px;
+                overflow: hidden;
+            }
+
+            th, td {
+                padding: 12px 15px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+
+            th {
+                background-color: #a43e3e;
+                color: white;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            tr:nth-child(even) {
+                background-color: #f8f9fa;
+            }
+
+            tr:hover {
+                background-color: #e9ecef;
+            }
+        </style>
+    </head>
+    <body>
+        <img src="logo.webp" alt="Ashesi University Logo" style="display:block; margin-left:auto; margin-right:auto; width:150px; height:auto;">
+        <div class="container">
+            <h1>FI Dashboard</h1>
+            <p align = "center">Welcome, Faculty Intern! Here you can view the student database, as well as other tables and resources in the database.</p>
+            <br><br>
+
+                <h2 style="font-family: 'Times New Roman', Times, serif; color: #622020;">Dashboard view</h2>
+                <table id="dataTable">
+                    <thead>
+                        <tr></tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <div class="message" style="display:none; text-align:center; margin-top:20px; color:#888;">Select a table to view its data.</div>
+                <p align = "center"> Pick a button, view a table. Click again to collapse.</p>
+                <div class="button-container">
+                    <button class="button" data-table="UserAccount">UserAccount</button>
+                    <button class="button" data-table="Students">Students</button>
+                    <button class="button" data-table="FacultyInterns">FacultyInterns</button>
+                    <button class="button" data-table="Participation">Participation</button>
+                    <button class="button" data-table="Department">Department</button>
+                    <div class="table-section">
+                    </div>
+                    </thead>
+                    <tbody>
+                        <script>
+        // Store all the database data directly in a JavaScript object
+        const database = {
+            UserAccount: {
+                headers: ['userid', 'email', 'fname', 'lname', 'DoB', 'account_type'],
+                data: [
+                    [1, 'john.doe@example.edu', 'John', 'Doe', '2000-05-15', 'student'],
+                    [2, 'jane.smith@example.edu', 'Jane', 'Smith', '1999-11-20', 'student'],
+                    [3, 'alice.jones@example.edu', 'Alice', 'Jones', '1985-08-01', 'faculty'],
+                    [4, 'bob.williams@example.edu', 'Bob', 'Williams', '1998-03-25', 'student'],
+                    [5, 'charlie.brown@example.edu', 'Charlie', 'Brown', '1990-06-10', 'faculty'],
+                    [6, 'emily.davis@example.edu', 'Emily', 'Davis', '2001-02-14', 'student'],
+                    [7, 'david.lee@example.edu', 'David', 'Lee', '1978-09-03', 'faculty']
+                ]
+            },
+            Students: {
+                headers: ['userid', 'smajorid', 'enrollment_date'],
+                data: [
+                    [1, 101, '2023-09-01'],
+                    [2, 102, '2023-09-01'],
+                    [4, 101, '2023-09-01'],
+                    [6, 103, '2023-09-01']
+                ]
+            },
+            FacultyInterns: {
+                headers: ['userid', 'internship_start_date', 'internship_end_date'],
+                data: [
+                    [3, '2024-01-15', '2025-01-15'],
+                    [5, '2024-03-20', '2025-03-20'],
+                    [7, '2024-05-01', '2025-05-01']
+                ]
+            },
+            Department: {
+                headers: ['did', 'dname', 'dept_head_userid'],
+                data: [
+                    [201, 'Computer Science Department', 3],
+                    [202, 'Department of Mathematics', 5],
+                    [203, 'Department of Biology', 7]
+                ]
+            },
+            Participation: {
+                headers: ['pid', 'userid', 'sessid', 'participation_details', 'grade_points'],
+                data: [
+                    [801, 1, 501, 'Answered a question about primary keys.', 2.5],
+                    [802, 4, 501, 'Asked a follow-up question about foreign keys.', 2.0],
+                    [803, 2, 503, 'Solved a problem on the board.', 5.0],
+                    [804, 1, 504, 'Gave a brief explanation of binary trees.', 3.0],
+                    [805, 6, 505, 'Contributed to group discussion.', 1.5]
+                ]
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttons = document.querySelectorAll('.button');
+            const tableBody = document.querySelector('#dataTable tbody');
+            const tableHead = document.querySelector('#dataTable thead tr');
+            const message = document.querySelector('.message');
+
+            let currentTableName = null;
+
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tableName = button.getAttribute('data-table');
+                    const tableData = database[tableName];
+
+                    // 1. Always clear the table and message first
+                    tableHead.innerHTML = '';
+                    tableBody.innerHTML = '';
+                    message.style.display = 'none';
+
+                    // 2. TOGGLE CHECK (Collapse Logic)
+                    if (tableName === currentTableName) {
+                        currentTableName = null; // Reset the state (table is now collapsed)
+                        return; // Stop execution
+                    }
+
+                    // --- 3. DISPLAY NEW TABLE LOGIC (Only runs if a different table is clicked) ---
+
+                    // Create the table headers
+                    tableData.headers.forEach(headerText => {
+                        const th = document.createElement('th');
+                        th.textContent = headerText;
+                        tableHead.appendChild(th);
+                    });
+
+                    // Populate the table body with data
+                    tableData.data.forEach(rowData => {
+                        const tr = document.createElement('tr');
+                        rowData.forEach(cellData => {
+                            const td = document.createElement('td');
+                            td.textContent = cellData;
+                            tr.appendChild(td);
+                        });
+                        tableBody.appendChild(tr);
+                    });
+                    
+                    // FIX: Update the current table state HERE, after the table is built
+                    currentTableName = tableName;
+                });
+            });
+        });
+        </script>
+    </body>
+</html>
