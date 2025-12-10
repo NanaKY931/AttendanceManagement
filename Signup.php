@@ -5,7 +5,7 @@ ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/logs/error.log');
 
 // Set proper content type
-header('Content-Type: application/json; charset=utf-8');
+header('Location: S DASHBOARD.html');
 
 // Handle form submission
 $response = array('success' => false, 'message' => '');
@@ -197,4 +197,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-?>
